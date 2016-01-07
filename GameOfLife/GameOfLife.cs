@@ -8,20 +8,21 @@ namespace GameOfLife
 {
     public static class GameOfLife
     {
-        public const bool Alive = true;
-        public const bool Dead = false;
+        private const bool Alive = true;
+        private const bool Dead = false;
 
-        public static void Run(bool[,] grid, int iterations)
+        public static void Run(
+            bool[,] grid, 
+            int iterations, 
+            Func<bool[,], bool[,]> iterator,
+            Action<bool[,], int> print,
+            Action postIteration)
         {
-            Print(Console.WriteLine, grid, 0);
-            Console.WriteLine("Press Enter To Begin");
-            Console.ReadLine();
-
             for (int iteration = 1; iteration < iterations; iteration++)
             {
-                grid = Iterate(grid);
-                Print(Console.WriteLine, grid, iteration);
-                Task.Delay(250).Wait();
+                grid = iterator(grid);
+                print(grid, iteration);
+                postIteration();
             }
         }
 
@@ -117,9 +118,10 @@ namespace GameOfLife
             }
         }
 
-        public static void Print(Action<string> writeLine, bool[,] grid, int iteration)
+        public static void Print(Action<string> writeLine, bool[,] grid, int iteration, Action clear = null)
         {
-            Console.Clear();
+            clear?.Invoke();
+
             writeLine($"Iteration {iteration}");
             PrintGrid(writeLine, grid);
         }

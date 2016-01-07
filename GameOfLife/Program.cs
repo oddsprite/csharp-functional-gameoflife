@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace GameOfLife
 {
@@ -13,8 +14,17 @@ namespace GameOfLife
             grid[2, 4] = true;
             grid[2, 5] = true;
             grid[3, 4] = true;
-            
-            GameOfLife.Run(grid, 1000);
+
+            GameOfLife.Print(Console.WriteLine, grid, 0);
+            Console.WriteLine("Press Enter To Begin");
+            Console.ReadLine();
+
+            GameOfLife.Run(
+                grid,
+                1000,
+                GameOfLife.Iterate, 
+                (gridToPrint, iteration) => GameOfLife.Print(Console.WriteLine, gridToPrint, iteration, clear: Console.Clear),
+                () => Task.Delay(250).Wait());
 
             Console.ReadLine();
         }
