@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace GameOfLife
 {
@@ -18,7 +17,7 @@ namespace GameOfLife
             Action<bool[,], int> print,
             Action postIteration)
         {
-            for (int iteration = 1; iteration < iterations; iteration++)
+            for (int iteration = 1; iteration <= iterations; iteration++)
             {
                 grid = iterator(grid);
                 print(grid, iteration);
