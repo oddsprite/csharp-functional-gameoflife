@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using NUnit.Framework.Constraints;
 
@@ -56,6 +57,102 @@ namespace GameOfLife.Tests
 
             Assert.That(actualGrid, Is.Not.SameAs(grid));
             Assert.That(actualGrid, Is.SameAs(iteratedGrid));
+        }
+
+        [Test]
+        public void Neighbours_GridCellWithNoNeighbours_EmptyArrayReturned()
+        {
+            var grid = new bool[4, 4];
+            bool[] neighbours = grid.Neighbours(2, 2);
+
+            Assert.That(neighbours.Length, Is.EqualTo(8));
+            Assert.That(neighbours.Count(n => n), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Neighbours_GridCellWith3Neighbours_ArrayLength8With3TrueReturned()
+        {
+            var grid = new bool[4, 4];
+            grid[1, 1] = true;
+            grid[1, 2] = true;
+            grid[2, 1] = true;
+            bool[] neighbours = grid.Neighbours(2, 2);
+
+            Assert.That(neighbours.Length, Is.EqualTo(8));
+            Assert.That(neighbours.Count(n => n), Is.EqualTo(3));
+        }
+
+        [Test, TestCaseSource(nameof(CheckProcreationTests))]
+        public void CheckProcreationTest(bool[] neighbours, bool expected)
+        {
+            bool result = GameOfLife.CheckProcreation(neighbours);
+
+            Assert.That(result, Is.EqualTo(expected));
+        }
+
+        private static IEnumerable<TestCaseData> CheckProcreationTests()
+        {
+            yield return new TestCaseData(GetRandomNeighbours(3), true).SetName("CheckProcreation_With3Neighbours_ReturnsTrue");
+            yield return new TestCaseData(GetRandomNeighbours(4), false).SetName("CheckProcreation_With4Neighbours_ReturnsFalse");
+            yield return new TestCaseData(GetRandomNeighbours(2), false).SetName("CheckProcreation_With2Neighbours_ReturnsFalse");
+        }
+
+        [Test, TestCaseSource(nameof(CheckNextGenerationTests))]
+        public void CheckNextGenerationTest(bool[] neighbours, bool expected)
+        {
+            bool result = GameOfLife.CheckNextGeneration(neighbours);
+
+            Assert.That(result, Is.EqualTo(expected));
+        }
+
+        private static IEnumerable<TestCaseData> CheckNextGenerationTests()
+        {
+            yield return new TestCaseData(GetRandomNeighbours(3), true).SetName("CheckNextGeneration_With3Neighbours_ReturnsTrue");
+            yield return new TestCaseData(GetRandomNeighbours(2), true).SetName("CheckNextGeneration_With2Neighbours_ReturnsTrue");
+            yield return new TestCaseData(GetRandomNeighbours(1), false).SetName("CheckNextGeneration_With1Neighbour_ReturnsFalse");
+            yield return new TestCaseData(GetRandomNeighbours(4), false).SetName("CheckNextGeneration_With4Neighbours_ReturnsFalse");
+        }
+
+        [Test, TestCaseSource(nameof(CheckOvercrowdingTests))]
+        public void CheckOvercrowdingTest(bool[] neighbours, bool expected)
+        {
+            bool result = GameOfLife.CheckOvercrowding(neighbours);
+
+            Assert.That(result, Is.EqualTo(expected));
+        }
+
+        private static IEnumerable<TestCaseData> CheckOvercrowdingTests()
+        {
+            yield return new TestCaseData(GetRandomNeighbours(3), false).SetName("CheckOvercrowding_With3Neighbours_ReturnsFalse");
+            yield return new TestCaseData(GetRandomNeighbours(2), false).SetName("CheckOvercrowding_With2Neighbours_ReturnsFalse");
+            yield return new TestCaseData(GetRandomNeighbours(4), true).SetName("CheckOvercrowding_With4Neighbours_ReturnsTrue");
+        }
+
+        [Test, TestCaseSource(nameof(CheckUnderpopulationTests))]
+        public void CheckUnderpopulationTest(bool[] neighbours, bool expected)
+        {
+            bool result = GameOfLife.CheckUnderpopulation(neighbours);
+
+            Assert.That(result, Is.EqualTo(expected));
+        }
+
+        private static IEnumerable<TestCaseData> CheckUnderpopulationTests()
+        {
+            yield return new TestCaseData(GetRandomNeighbours(3), false).SetName("CheckUnderpopulation_With3Neighbours_ReturnsFalse");
+            yield return new TestCaseData(GetRandomNeighbours(2), false).SetName("CheckUnderpopulation_With2Neighbours_ReturnsFalse");
+            yield return new TestCaseData(GetRandomNeighbours(1), true).SetName("CheckUnderpopulation_With1Neighbour_ReturnsTrue");
+        }
+
+        private static bool[] GetRandomNeighbours(int numberOfNeighbours)
+        {
+            var neighbours = new bool[8];
+
+            for (int i = 0; i < numberOfNeighbours; i++)
+            {
+                neighbours[i] = true;
+            }
+            
+            return neighbours;
         }
     }
 }

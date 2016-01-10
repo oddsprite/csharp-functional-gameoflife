@@ -11,8 +11,8 @@ namespace GameOfLife
         private const bool Dead = false;
 
         public static void Run(
-            bool[,] grid, 
-            int iterations, 
+            bool[,] grid,
+            int iterations,
             Func<bool[,], bool[,]> iterator,
             Action<bool[,], int> print,
             Action postIteration)
@@ -34,29 +34,21 @@ namespace GameOfLife
             {
                 for (int j = 0; j < grid.GetLength(1); j++)
                 {
-                    bool cellAlive = grid[i, j];
-                    bool[] neighbours = grid.Neighbours(i, j);
+                    var cellState = Tuple.Create(grid[i, j], grid.Neighbours(i, j), i, j);
 
-                    if (cellAlive && CheckUnderpopulation(neighbours))
-                    {
-                        resultGrid[i, j] = Dead;
-                    }
-                    else if (cellAlive && CheckOvercrowding(neighbours))
-                    {
-                        resultGrid[i, j] = Dead;
-                    }
-                    else if (cellAlive && CheckNextGeneration(neighbours))
-                    {
-                        resultGrid[i, j] = Alive;
-                    }
-                    else if (!cellAlive && CheckProcreation(neighbours))
-                    {
-                        resultGrid[i, j] = Alive;
-                    }
+                    ApplyConditions(cellState, resultGrid);
                 }
             }
 
             return resultGrid;
+        }
+
+        public static bool ApplyConditions(Tuple<bool, bool[], int, int> inputState, bool[,] resultGrid)
+        {
+            return A.Match(() => inputState.Item1 && CheckUnderpopulation(inputState.Item2), () => resultGrid[inputState.Item3, inputState.Item4] = Dead) ||
+                A.Match(() => inputState.Item1 && CheckOvercrowding(inputState.Item2), () => resultGrid[inputState.Item3, inputState.Item4] = Dead) ||
+                A.Match(() => inputState.Item1 && CheckNextGeneration(inputState.Item2), () => resultGrid[inputState.Item3, inputState.Item4] = Alive) ||
+                A.Match(() => !inputState.Item1 && CheckProcreation(inputState.Item2), () => resultGrid[inputState.Item3, inputState.Item4] = Alive);
         }
 
         public static bool CheckProcreation(bool[] neighbours)
