@@ -22,7 +22,7 @@ namespace GameOfLife
             GameOfLife.Run(
                 grid,
                 1000,
-                GameOfLife.Iterate, 
+                (g) => GameOfLife.Iterate(g, GameOfLife.ApplyConditions), 
                 (gridToPrint, iteration) => GameOfLife.Print(Console.WriteLine, gridToPrint, iteration, clear: Console.Clear),
                 () => Task.Delay(250).Wait());
 

@@ -25,7 +25,7 @@ namespace GameOfLife
             }
         }
 
-        public static bool[,] Iterate(bool[,] grid)
+        public static bool[,] Iterate(bool[,] grid, Func<GameState, bool[,], bool> applyConditions)
         {
             bool[,] resultGrid = new bool[grid.GetLength(0), grid.GetLength(1)];
             Array.Copy(grid, resultGrid, grid.Length);
@@ -34,21 +34,20 @@ namespace GameOfLife
             {
                 for (int j = 0; j < grid.GetLength(1); j++)
                 {
-                    var cellState = Tuple.Create(grid[i, j], grid.Neighbours(i, j), i, j);
-
-                    ApplyConditions(cellState, resultGrid);
+                    var gameState = new GameState(grid[i, j], grid.Neighbours(i, j), i, j);
+                    applyConditions(gameState, resultGrid);
                 }
             }
 
             return resultGrid;
         }
 
-        public static bool ApplyConditions(Tuple<bool, bool[], int, int> inputState, bool[,] resultGrid)
+        public static bool ApplyConditions(GameState inputState, bool[,] resultGrid)
         {
-            return A.Match(() => inputState.Item1 && CheckUnderpopulation(inputState.Item2), () => resultGrid[inputState.Item3, inputState.Item4] = Dead) ||
-                A.Match(() => inputState.Item1 && CheckOvercrowding(inputState.Item2), () => resultGrid[inputState.Item3, inputState.Item4] = Dead) ||
-                A.Match(() => inputState.Item1 && CheckNextGeneration(inputState.Item2), () => resultGrid[inputState.Item3, inputState.Item4] = Alive) ||
-                A.Match(() => !inputState.Item1 && CheckProcreation(inputState.Item2), () => resultGrid[inputState.Item3, inputState.Item4] = Alive);
+            return A.Match(() => inputState.CellState && CheckUnderpopulation(inputState.Neighbours), () => resultGrid[inputState.Y, inputState.X] = Dead) ||
+                A.Match(() => inputState.CellState && CheckOvercrowding(inputState.Neighbours), () => resultGrid[inputState.Y, inputState.X] = Dead) ||
+                A.Match(() => inputState.CellState && CheckNextGeneration(inputState.Neighbours), () => resultGrid[inputState.Y, inputState.X] = Alive) ||
+                A.Match(() => !inputState.CellState && CheckProcreation(inputState.Neighbours), () => resultGrid[inputState.Y, inputState.X] = Alive);
         }
 
         public static bool CheckProcreation(bool[] neighbours)
@@ -115,6 +114,22 @@ namespace GameOfLife
 
             writeLine($"Iteration {iteration}");
             PrintGrid(writeLine, grid);
+        }
+
+        public class GameState
+        {
+            public bool CellState { get; }
+            public bool[] Neighbours { get; }
+            public int Y { get; }
+            public int X { get; }
+
+            public GameState(bool cellState, bool[] neighbours, int y, int x)
+            {
+                this.CellState = cellState;
+                this.Neighbours = neighbours;
+                this.Y = y;
+                this.X = x;
+            }
         }
     }
 }
