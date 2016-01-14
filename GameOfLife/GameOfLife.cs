@@ -44,10 +44,13 @@ namespace GameOfLife
 
         public static bool ApplyConditions(GameState inputState, bool[,] resultGrid)
         {
-            return A.Match(() => inputState.CellState && CheckUnderpopulation(inputState.Neighbours), () => resultGrid[inputState.Y, inputState.X] = Dead) ||
-                A.Match(() => inputState.CellState && CheckOvercrowding(inputState.Neighbours), () => resultGrid[inputState.Y, inputState.X] = Dead) ||
-                A.Match(() => inputState.CellState && CheckNextGeneration(inputState.Neighbours), () => resultGrid[inputState.Y, inputState.X] = Alive) ||
-                A.Match(() => !inputState.CellState && CheckProcreation(inputState.Neighbours), () => resultGrid[inputState.Y, inputState.X] = Alive);
+            return inputState.CellState && CheckUnderpopulation(inputState.Neighbours)
+                ? resultGrid[inputState.Y, inputState.X] = Dead
+                : inputState.CellState && CheckOvercrowding(inputState.Neighbours)
+                    ? resultGrid[inputState.Y, inputState.X] = Dead
+                    : inputState.CellState && CheckNextGeneration(inputState.Neighbours)
+                        ? resultGrid[inputState.Y, inputState.X] = Alive
+                        : !inputState.CellState && CheckProcreation(inputState.Neighbours) && (resultGrid[inputState.Y, inputState.X] = Alive);
         }
 
         public static bool CheckProcreation(bool[] neighbours)
