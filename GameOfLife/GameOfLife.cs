@@ -25,7 +25,7 @@ namespace GameOfLife
             }
         }
 
-        public static bool[,] Iterate(bool[,] grid, Func<GameState, bool[,], bool> applyConditions)
+        public static bool[,] Iterate(bool[,] grid, Func<bool, bool[], bool> applyConditions)
         {
             bool[,] resultGrid = new bool[grid.GetLength(0), grid.GetLength(1)];
             Array.Copy(grid, resultGrid, grid.Length);
@@ -34,23 +34,18 @@ namespace GameOfLife
             {
                 for (int j = 0; j < grid.GetLength(1); j++)
                 {
-                    var gameState = new GameState(grid[i, j], grid.Neighbours(i, j), i, j);
-                    applyConditions(gameState, resultGrid);
+                    resultGrid[i,j] = applyConditions(grid[i,j], grid.Neighbours(i,j));
                 }
             }
 
             return resultGrid;
         }
 
-        public static bool ApplyConditions(GameState inputState, bool[,] resultGrid)
+        public static bool ApplyConditions(bool cellState, bool[] neighbours)
         {
-            return inputState.CellState && CheckUnderpopulation(inputState.Neighbours)
-                ? resultGrid[inputState.Y, inputState.X] = Dead
-                : inputState.CellState && CheckOvercrowding(inputState.Neighbours)
-                    ? resultGrid[inputState.Y, inputState.X] = Dead
-                    : inputState.CellState && CheckNextGeneration(inputState.Neighbours)
-                        ? resultGrid[inputState.Y, inputState.X] = Alive
-                        : !inputState.CellState && CheckProcreation(inputState.Neighbours) && (resultGrid[inputState.Y, inputState.X] = Alive);
+            return cellState ?
+                !CheckUnderpopulation(neighbours) && !CheckOvercrowding(neighbours) && CheckNextGeneration(neighbours) :
+                CheckProcreation(neighbours);
         }
 
         public static bool CheckProcreation(bool[] neighbours)
@@ -117,22 +112,6 @@ namespace GameOfLife
 
             writeLine($"Iteration {iteration}");
             PrintGrid(writeLine, grid);
-        }
-
-        public class GameState
-        {
-            public bool CellState { get; }
-            public bool[] Neighbours { get; }
-            public int Y { get; }
-            public int X { get; }
-
-            public GameState(bool cellState, bool[] neighbours, int y, int x)
-            {
-                this.CellState = cellState;
-                this.Neighbours = neighbours;
-                this.Y = y;
-                this.X = x;
-            }
         }
     }
 }

@@ -159,22 +159,19 @@ namespace GameOfLife.Tests
         public void Iterate_WithTwoSquareGrid_ApplyConditionsCalledForEachCell()
         {
             bool[,] grid = new bool[2, 2];
-            List<Tuple<int, int>> conditionedCells = new List<Tuple<int, int>>(4);
+            int applyConditionsCalledTimes = 0;
 
-            Func<GameOfLife.GameState, bool[,], bool> applyConditions = (gameState, g) =>
+
+            Func<bool, bool[], bool> applyConditions = (cellState, neighbours) =>
             {
-                conditionedCells.Add(Tuple.Create(gameState.Y, gameState.X));
+                applyConditionsCalledTimes++;
                 return true;
             };
 
             bool[,] result = GameOfLife.Iterate(grid, applyConditions);
 
             Assert.That(result, Is.Not.SameAs(grid));
-            Assert.That(conditionedCells.Count, Is.EqualTo(4));
-            Assert.That(conditionedCells.Contains(Tuple.Create(0, 0)));
-            Assert.That(conditionedCells.Contains(Tuple.Create(0, 1)));
-            Assert.That(conditionedCells.Contains(Tuple.Create(1, 0)));
-            Assert.That(conditionedCells.Contains(Tuple.Create(1, 1)));
+            Assert.That(applyConditionsCalledTimes, Is.EqualTo(4));
         }
     }
 }
