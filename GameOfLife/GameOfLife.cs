@@ -95,7 +95,7 @@ namespace GameOfLife
         {
             for (int i = 0; i < grid.GetLength(0); i++)
             {
-                StringBuilder line = new StringBuilder(5);
+                StringBuilder line = new StringBuilder(grid.GetLength(1));
 
                 for (int j = 0; j < grid.GetLength(1); j++)
                 {

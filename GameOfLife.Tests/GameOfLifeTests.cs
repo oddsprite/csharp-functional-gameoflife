@@ -173,5 +173,22 @@ namespace GameOfLife.Tests
             Assert.That(result, Is.Not.SameAs(grid));
             Assert.That(applyConditionsCalledTimes, Is.EqualTo(4));
         }
+
+        [Test]
+        public void Print_WithPopulatedGrid_OutputIsFormatted()
+        {
+            bool[,] grid = new bool[2,2];
+            grid[0, 0] = true;
+            grid[1, 1] = true;
+            List<string> outputLines = new List<string>(3);
+            Action<string> writeLine = line => outputLines.Add(line);
+
+            GameOfLife.Print(writeLine, grid, 1);
+
+            Assert.That(outputLines[0], Is.EqualTo("Iteration 1"));
+            Assert.That(outputLines[1], Is.EqualTo("x."));
+            Assert.That(outputLines[2], Is.EqualTo(".x"));
+            
+        }
     }
 }
