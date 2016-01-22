@@ -9,33 +9,38 @@ namespace GameOfLife.Tests
     [TestFixture]
     public class GameOfLifeTests
     {
-        [Test, TestCaseSource(nameof(OnGridTests))]
-        public void OnGridTest(int x, int y, IResolveConstraint expectation)
+        [Test, TestCaseSource(nameof(IsNextToTests))]
+        public void OnGridTest(Cell otherCell, IResolveConstraint expectation)
         {
-            bool[,] grid = new bool[3, 3];
-            Assert.That(grid.OnGrid(y, x), expectation);
+            var cell = new Cell(3, 4, true);
+            Assert.That(cell.IsNextTo(otherCell), expectation);
         }
 
-        private static IEnumerable<TestCaseData> OnGridTests()
+        private static IEnumerable<TestCaseData> IsNextToTests()
         {
-            yield return new TestCaseData(1, 1, Is.True).SetName("OnGrid_CoordinatesExistOnGrid_True");
-            yield return new TestCaseData(1, -1, Is.False).SetName("OnGrid_CoordinatesOffGridNegativeX_False");
-            yield return new TestCaseData(1, 3, Is.False).SetName("OnGrid_CoordinatesOffGridPositiveX_False");
-            yield return new TestCaseData(-1, 1, Is.False).SetName("OnGrid_CoordinatesOffGridNegativeY_False");
-            yield return new TestCaseData(3, 1, Is.False).SetName("OnGrid_CoordinatesOffGridPositiveY_False");
+            yield return new TestCaseData(new Cell(1, 1, false), Is.False).SetName("IsNextTo_NonNeighbour_False");
+            yield return new TestCaseData(new Cell(3, 4, false), Is.False).SetName("IsNextTo_Self_False");
+            yield return new TestCaseData(new Cell(1, 4, false), Is.False).SetName("IsNextTo_SameLine_False");
+            yield return new TestCaseData(new Cell(2, 2, false), Is.False).SetName("IsNextTo_KnightMoveAway_False");
+
+            yield return new TestCaseData(new Cell(3, 3, false), Is.True).SetName("IsNextTo_Right_True");
+            yield return new TestCaseData(new Cell(3, 5, false), Is.True).SetName("IsNextTo_Left_True");
+            yield return new TestCaseData(new Cell(2, 4, false), Is.True).SetName("IsNextTo_Above_True");
+            yield return new TestCaseData(new Cell(4, 4, false), Is.True).SetName("IsNextTo_Below_True");
+            yield return new TestCaseData(new Cell(2, 3, false), Is.True).SetName("IsNextTo_Diagonal_True");
         }
 
         [Test]
         public void Run_With3Iterations_AllIterationsRun()
         {
-            var grid = new bool[1, 1];
+            var grid = GameOfLife.GetGrid(new bool[1, 1]);
             int iterations = 3;
             int actualIterations = 0;
 
-            Func<bool[,], bool[,]> iterator = iterat =>
+            Func<IEnumerable<Cell>, IEnumerable<Cell>> iterator = iterat =>
             {
                 actualIterations++;
-                return new bool[1, 1];
+                return new List<Cell> { new Cell(1, 1, false) };
             };
 
             GameOfLife.Run(grid, iterations, iterator, (bools, i) => { }, () => { });
@@ -46,12 +51,12 @@ namespace GameOfLife.Tests
         [Test]
         public void Run_IteratedGridResult_IterationResultPassedToPrint()
         {
-            var grid = new bool[2, 2];
-            var iteratedGrid = new bool[2, 2];
-            bool[,] actualGrid = null;
+            var grid = GameOfLife.GetGrid(new bool[2, 2]);
+            var iteratedGrid = GameOfLife.GetGrid(new bool[2, 2]);
+            IEnumerable<Cell> actualGrid = null;
 
-            Func<bool[,], bool[,]> iterator = iterat => iteratedGrid;
-            Action<bool[,], int> print = (gridToPrint, iteration) => { actualGrid = gridToPrint; };
+            Func<IEnumerable<Cell>, IEnumerable<Cell>> iterator = iterat => iteratedGrid;
+            Action<IEnumerable<Cell>, int> print = (gridToPrint, iteration) => { actualGrid = gridToPrint; };
 
             GameOfLife.Run(grid, 1, iterator, print, () => { });
 
@@ -60,30 +65,29 @@ namespace GameOfLife.Tests
         }
 
         [Test]
-        public void Neighbours_GridCellWithNoNeighbours_EmptyArrayReturned()
+        public void Neighbours_GridCellWithNoNeighbours_EmptyCollectionReturned()
         {
-            var grid = new bool[4, 4];
-            bool[] neighbours = grid.Neighbours(2, 2);
+            var grid = GameOfLife.GetGrid(new bool[4, 4]);
+            IEnumerable<Cell> neighbours = grid.Neighbours(new Cell(2, 2, false));
 
-            Assert.That(neighbours.Length, Is.EqualTo(8));
-            Assert.That(neighbours.Count(n => n), Is.EqualTo(0));
+            Assert.That(neighbours.Count, Is.EqualTo(0));
         }
 
         [Test]
-        public void Neighbours_GridCellWith3Neighbours_ArrayLength8With3TrueReturned()
+        public void Neighbours_GridCellWith3Neighbours_CollectionWith3CellsReturned()
         {
-            var grid = new bool[4, 4];
-            grid[1, 1] = true;
-            grid[1, 2] = true;
-            grid[2, 1] = true;
-            bool[] neighbours = grid.Neighbours(2, 2);
+            var array = new bool[4, 4];
+            array[1, 1] = true;
+            array[1, 2] = true;
+            array[2, 1] = true;
+            var grid = GameOfLife.GetGrid(array);
+            List<Cell> neighbours = grid.Neighbours(new Cell(2, 2, false));
 
-            Assert.That(neighbours.Length, Is.EqualTo(8));
-            Assert.That(neighbours.Count(n => n), Is.EqualTo(3));
+            Assert.That(neighbours.Count, Is.EqualTo(3));
         }
 
         [Test, TestCaseSource(nameof(CheckProcreationTests))]
-        public void CheckProcreationTest(bool[] neighbours, bool expected)
+        public void CheckProcreationTest(List<Cell> neighbours, bool expected)
         {
             bool result = GameOfLife.CheckProcreation(neighbours);
 
@@ -97,24 +101,8 @@ namespace GameOfLife.Tests
             yield return new TestCaseData(GetRandomNeighbours(2), false).SetName("CheckProcreation_With2Neighbours_ReturnsFalse");
         }
 
-        [Test, TestCaseSource(nameof(CheckNextGenerationTests))]
-        public void CheckNextGenerationTest(bool[] neighbours, bool expected)
-        {
-            bool result = GameOfLife.CheckNextGeneration(neighbours);
-
-            Assert.That(result, Is.EqualTo(expected));
-        }
-
-        private static IEnumerable<TestCaseData> CheckNextGenerationTests()
-        {
-            yield return new TestCaseData(GetRandomNeighbours(3), true).SetName("CheckNextGeneration_With3Neighbours_ReturnsTrue");
-            yield return new TestCaseData(GetRandomNeighbours(2), true).SetName("CheckNextGeneration_With2Neighbours_ReturnsTrue");
-            yield return new TestCaseData(GetRandomNeighbours(1), false).SetName("CheckNextGeneration_With1Neighbour_ReturnsFalse");
-            yield return new TestCaseData(GetRandomNeighbours(4), false).SetName("CheckNextGeneration_With4Neighbours_ReturnsFalse");
-        }
-
         [Test, TestCaseSource(nameof(CheckOvercrowdingTests))]
-        public void CheckOvercrowdingTest(bool[] neighbours, bool expected)
+        public void CheckOvercrowdingTest(List<Cell> neighbours, bool expected)
         {
             bool result = GameOfLife.CheckOvercrowding(neighbours);
 
@@ -129,7 +117,7 @@ namespace GameOfLife.Tests
         }
 
         [Test, TestCaseSource(nameof(CheckUnderpopulationTests))]
-        public void CheckUnderpopulationTest(bool[] neighbours, bool expected)
+        public void CheckUnderpopulationTest(List<Cell> neighbours, bool expected)
         {
             bool result = GameOfLife.CheckUnderpopulation(neighbours);
 
@@ -143,13 +131,13 @@ namespace GameOfLife.Tests
             yield return new TestCaseData(GetRandomNeighbours(1), true).SetName("CheckUnderpopulation_With1Neighbour_ReturnsTrue");
         }
 
-        private static bool[] GetRandomNeighbours(int numberOfNeighbours)
+        private static IEnumerable<Cell> GetRandomNeighbours(int numberOfNeighbours)
         {
-            var neighbours = new bool[8];
+            var neighbours = new List<Cell>();
 
             for (int i = 0; i < numberOfNeighbours; i++)
             {
-                neighbours[i] = true;
+                neighbours.Add(new Cell(0, 0, true));
             }
 
             return neighbours;
@@ -158,17 +146,17 @@ namespace GameOfLife.Tests
         [Test]
         public void Iterate_WithTwoSquareGrid_ApplyConditionsCalledForEachCell()
         {
-            bool[,] grid = new bool[2, 2];
+            IEnumerable<Cell> grid = GameOfLife.GetGrid(new bool[2, 2]);
             int applyConditionsCalledTimes = 0;
 
 
-            Func<bool, bool[], bool> applyConditions = (cellState, neighbours) =>
+            Func<bool, IEnumerable<Cell>, bool> applyConditions = (cellState, neighbours) =>
             {
                 applyConditionsCalledTimes++;
                 return true;
             };
 
-            bool[,] result = GameOfLife.Iterate(grid, applyConditions);
+            IEnumerable<Cell> result = GameOfLife.Iterate(grid, applyConditions);
 
             Assert.That(result, Is.Not.SameAs(grid));
             Assert.That(applyConditionsCalledTimes, Is.EqualTo(4));
@@ -177,9 +165,10 @@ namespace GameOfLife.Tests
         [Test]
         public void Print_WithPopulatedGrid_OutputIsFormatted()
         {
-            bool[,] grid = new bool[2,2];
-            grid[0, 0] = true;
-            grid[1, 1] = true;
+            bool[,] array = new bool[2, 2];
+            array[0, 0] = true;
+            array[1, 1] = true;
+            IEnumerable<Cell> grid = GameOfLife.GetGrid(array);
             List<string> outputLines = new List<string>(3);
             Action<string> writeLine = line => outputLines.Add(line);
 
@@ -188,7 +177,7 @@ namespace GameOfLife.Tests
             Assert.That(outputLines[0], Is.EqualTo("Iteration 1"));
             Assert.That(outputLines[1], Is.EqualTo("x."));
             Assert.That(outputLines[2], Is.EqualTo(".x"));
-            
+
         }
     }
 }

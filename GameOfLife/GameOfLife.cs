@@ -1,20 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace GameOfLife
 {
     public static class GameOfLife
     {
-        private const bool Alive = true;
-        private const bool Dead = false;
-
         public static void Run(
-            bool[,] grid,
+            IEnumerable<Cell> grid,
             int iterations,
-            Func<bool[,], bool[,]> iterator,
-            Action<bool[,], int> print,
+            Func<IEnumerable<Cell>, IEnumerable<Cell>> iterator,
+            Action<IEnumerable<Cell>, int> print,
             Action postIteration)
         {
             for (int iteration = 1; iteration <= iterations; iteration++)
@@ -25,93 +21,76 @@ namespace GameOfLife
             }
         }
 
-        public static bool[,] Iterate(bool[,] grid, Func<bool, bool[], bool> applyConditions)
+        public static IEnumerable<Cell> Iterate(IEnumerable<Cell> grid, Func<bool, List<Cell>, bool> applyConditions)
         {
-            bool[,] resultGrid = new bool[grid.GetLength(0), grid.GetLength(1)];
-            Array.Copy(grid, resultGrid, grid.Length);
-
-            for (int i = 0; i < grid.GetLength(0); i++)
-            {
-                for (int j = 0; j < grid.GetLength(1); j++)
-                {
-                    resultGrid[i,j] = applyConditions(grid[i,j], grid.Neighbours(i,j));
-                }
-            }
-
-            return resultGrid;
+            // NOTE - need to call ToList to ensure it is fully evaluated.
+            return grid.Select(cell => new Cell(cell.X, cell.Y, applyConditions(cell.SwitchedOn, grid.Neighbours(cell)))).ToList();
         }
 
-        public static bool ApplyConditions(bool cellState, bool[] neighbours)
+        public static bool ApplyConditions(bool cellState, List<Cell> neighbours)
         {
             return cellState ?
-                !CheckUnderpopulation(neighbours) && !CheckOvercrowding(neighbours) && CheckNextGeneration(neighbours) :
-                CheckProcreation(neighbours);
+                    !CheckUnderpopulation(neighbours) && !CheckOvercrowding(neighbours) :
+                    CheckProcreation(neighbours);
         }
 
-        public static bool CheckProcreation(bool[] neighbours)
+        public static bool CheckProcreation(List<Cell> neighbours)
         {
-            return neighbours.Count(n => n) == 3;
+            return neighbours.Count == 3;
         }
 
-        public static bool CheckNextGeneration(bool[] neighbours)
+        public static bool CheckOvercrowding(List<Cell> neighbours)
         {
-            return new[] { 2, 3 }.Contains(neighbours.Count(n => n));
+            return neighbours.Count > 3;
         }
 
-        public static bool CheckOvercrowding(bool[] neighbours)
+        public static bool CheckUnderpopulation(List<Cell> neighbours)
         {
-            return neighbours.Count(n => n) > 3;
+            return neighbours.Count < 2;
         }
 
-        public static bool CheckUnderpopulation(bool[] neighbours)
+        public static List<Cell> Neighbours(this IEnumerable<Cell> grid, Cell cell)
         {
-            return neighbours.Count(n => n) < 2;
+            return grid.Where(otherCell => cell.IsNextTo(otherCell) && otherCell.SwitchedOn).ToList();
         }
 
-        public static bool[] Neighbours(this bool[,] grid, int y, int x)
+        public static bool IsNextTo(this Cell cell, Cell other)
         {
-            List<bool> neighbours = new List<bool>();
-
-            for (int i = y - 1; i <= y + 1; i++)
-            {
-                for (int j = x - 1; j <= x + 1; j++)
-                {
-                    if (grid.OnGrid(i, j) && !(i == y && j == x))
-                    {
-                        neighbours.Add(grid[i, j]);
-                    }
-                }
-            }
-
-            return neighbours.ToArray();
+            var dx = Math.Abs(cell.X - other.X);
+            var dy = Math.Abs(cell.Y - other.Y);
+            return (dx == 0 || dx == 1) && (dy == 0 || dy == 1) && (dx == 1 || dy == 1);
         }
 
-        public static bool OnGrid(this bool[,] grid, int y, int x)
+        public static void PrintGrid(Action<string> writeLine, IEnumerable<Cell> grid)
         {
-            return y >= 0 && x >= 0 && y < grid.GetLength(0) && x < grid.GetLength(1);
+            grid.Select(cell => cell.X)
+                .Distinct()
+                .OrderBy(i => i)
+                .ToList()
+                .ForEach(i => writeLine(string.Concat(grid
+                    .Where(item => item.X == i)
+                    .OrderBy(item => item.Y)
+                    .Select(item => item.SwitchedOn ? "x" : ".")))
+                );
         }
 
-        public static void PrintGrid(Action<string> writeLine, bool[,] grid)
-        {
-            for (int i = 0; i < grid.GetLength(0); i++)
-            {
-                StringBuilder line = new StringBuilder(grid.GetLength(1));
-
-                for (int j = 0; j < grid.GetLength(1); j++)
-                {
-                    line.Append(grid[i, j] ? "x" : ".");
-                }
-
-                writeLine(line.ToString());
-            }
-        }
-
-        public static void Print(Action<string> writeLine, bool[,] grid, int iteration, Action clear = null)
+        public static void Print(Action<string> writeLine, IEnumerable<Cell> grid, int iteration, Action clear = null)
         {
             clear?.Invoke();
 
             writeLine($"Iteration {iteration}");
             PrintGrid(writeLine, grid);
+        }
+
+        public static IEnumerable<Cell> GetGrid(bool[,] grid)
+        {
+            for (int i = 0; i < grid.GetLength(0); i++)
+            {
+                for (int j = 0; j < grid.GetLength(1); j++)
+                {
+                    yield return new Cell(i, j, grid[i, j]);
+                }
+            }
         }
     }
 }
